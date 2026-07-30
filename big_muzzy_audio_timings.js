@@ -1,32 +1,32 @@
-// Generated from the local Big Muzzy MP3 and SRT files.
+// Generated from the local Big Muzzy MP3 and SRT files in ./media/.
 const bigMuzzyAudioFiles = {
-  "1": "./Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.mp3",
-  "2": "./Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.mp3",
-  "3": "./Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.mp3",
-  "4": "./Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.mp3",
-  "5": "./Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.mp3",
-  "6": "./Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.mp3",
-  "7": "./Muzzy in Gondoland - 006 - Muzzy Comes Back 01.mp3",
-  "8": "./Muzzy in Gondoland - 005 - Muzzy Comes Back 02.mp3",
-  "9": "./Muzzy in Gondoland - 004 - Muzzy Comes Back 03.mp3",
-  "10": "./Muzzy in Gondoland - 003 - Muzzy Comes Back 04.mp3",
-  "11": "./Muzzy in Gondoland - 002 - Muzzy Comes Back 05.mp3",
-  "12": "./Muzzy in Gondoland - 001 - Muzzy Comes Back 06.mp3"
+  "1": "./media/Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.mp3",
+  "2": "./media/Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.mp3",
+  "3": "./media/Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.mp3",
+  "4": "./media/Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.mp3",
+  "5": "./media/Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.mp3",
+  "6": "./media/Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.mp3",
+  "7": "./media/Muzzy in Gondoland - 006 - Muzzy Comes Back 01.mp3",
+  "8": "./media/Muzzy in Gondoland - 005 - Muzzy Comes Back 02.mp3",
+  "9": "./media/Muzzy in Gondoland - 004 - Muzzy Comes Back 03.mp3",
+  "10": "./media/Muzzy in Gondoland - 003 - Muzzy Comes Back 04.mp3",
+  "11": "./media/Muzzy in Gondoland - 002 - Muzzy Comes Back 05.mp3",
+  "12": "./media/Muzzy in Gondoland - 001 - Muzzy Comes Back 06.mp3"
 };
 
 const bigMuzzySubtitleFiles = {
-  "1": "./Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.srt",
-  "2": "./Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.srt",
-  "3": "./Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.srt",
-  "4": "./Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.srt",
-  "5": "./Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.srt",
-  "6": "./Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.srt",
-  "7": "./Muzzy in Gondoland - 006 - Muzzy Comes Back 01.srt",
-  "8": "./Muzzy in Gondoland - 005 - Muzzy Comes Back 02.srt",
-  "9": "./Muzzy in Gondoland - 004 - Muzzy Comes Back 03.srt",
-  "10": "./Muzzy in Gondoland - 003 - Muzzy Comes Back 04.srt",
-  "11": "./Muzzy in Gondoland - 002 - Muzzy Comes Back 05.srt",
-  "12": "./Muzzy in Gondoland - 001 - Muzzy Comes Back 06.srt"
+  "1": "./media/Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.srt",
+  "2": "./media/Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.srt",
+  "3": "./media/Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.srt",
+  "4": "./media/Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.srt",
+  "5": "./media/Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.srt",
+  "6": "./media/Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.srt",
+  "7": "./media/Muzzy in Gondoland - 006 - Muzzy Comes Back 01.srt",
+  "8": "./media/Muzzy in Gondoland - 005 - Muzzy Comes Back 02.srt",
+  "9": "./media/Muzzy in Gondoland - 004 - Muzzy Comes Back 03.srt",
+  "10": "./media/Muzzy in Gondoland - 003 - Muzzy Comes Back 04.srt",
+  "11": "./media/Muzzy in Gondoland - 002 - Muzzy Comes Back 05.srt",
+  "12": "./media/Muzzy in Gondoland - 001 - Muzzy Comes Back 06.srt"
 };
 
 const bigMuzzyAudioTimings = {

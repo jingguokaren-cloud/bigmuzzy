@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big Muzzy 生词复习</title>
+    <meta name="description" content="Big Muzzy 独立生词复习页，自动显示中文释义，支持发音和 Word 导出">
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5b21b6;
+            --secondary: #764ba2;
+            --pink: #ec4899;
+            --green: #059669;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --surface: #ffffff;
+            --soft-purple: #f5f3ff;
+            --soft-green: #ecfdf5;
+            --soft-yellow: #fffbeb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) fixed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                "Microsoft YaHei", sans-serif;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .page-shell {
+            width: min(1100px, calc(100% - 28px));
+            margin: 0 auto;
+            padding: 28px 0 48px;
+        }
+
+        .hero {
+            color: white;
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 5vw, 2.8rem);
+            letter-spacing: 0.03em;
+            text-shadow: 0 3px 12px rgba(31, 41, 55, 0.25);
+        }
+
+        .hero p {
+            margin: 8px 0 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .review-panel {
+            padding: clamp(18px, 4vw, 30px);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.97);
+            box-shadow: 0 24px 60px rgba(31, 41, 55, 0.24);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            min-height: 44px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 999px;
+            color: white;
+            font-weight: 700;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+
+        .export-button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 8px 18px rgba(5, 150, 105, 0.22);
+        }
+
+        .export-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .stats {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            min-width: 108px;
+            padding: 10px 14px;
+            border: 1px solid #ddd6fe;
+            border-radius: 14px;
+            background: var(--soft-purple);
+            text-align: center;
+        }
+
+        .stat strong {
+            display: block;
+            color: var(--primary-dark);
+            font-size: 1.35rem;
+        }
+
+        .stat span {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .search-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 16px;
+            border: 2px solid #ddd6fe;
+            border-radius: 14px;
+            outline: none;
+            color: var(--text);
+            background: white;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.14);
+        }
+
+        .word-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .word-card {
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--primary);
+            border-radius: 18px;
+            background: var(--surface);
+            box-shadow: 0 8px 22px rgba(31, 41, 55, 0.08);
+        }
+
+        .word-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .word-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .english-word {
+            margin-right: auto;
+            color: var(--primary-dark);
+            font-size: 1.55rem;
+            font-weight: 800;
+        }
+
+        .speak-button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 5px 14px rgba(37, 99, 235, 0.22);
+        }
+
+        .chinese-meaning {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            min-height: 50px;
+            padding: 13px 16px;
+            border: 1px solid #a7f3d0;
+            border-radius: 13px;
+            color: #065f46;
+            background: var(--soft-green);
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .meaning-prefix {
+            flex: 0 0 auto;
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        .empty-state {
+            padding: 50px 20px;
+            border: 2px dashed #c4b5fd;
+            border-radius: 18px;
+            color: var(--muted);
+            background: var(--soft-purple);
+            text-align: center;
+        }
+
+        .empty-state .emoji {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 3rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .status-message {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 10;
+            max-width: min(360px, calc(100% - 36px));
+            padding: 12px 18px;
+            border-radius: 12px;
+            color: white;
+            background: #1f2937;
+            box-shadow: 0 10px 30px rgba(31, 41, 55, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 640px) {
+            .page-shell {
+                width: min(100% - 18px, 1100px);
+                padding-top: 18px;
+            }
+
+            .review-panel {
+                border-radius: 18px;
+            }
+
+            .toolbar,
+            .toolbar-group {
+                width: 100%;
+            }
+
+            .action-button {
+                flex: 1;
+            }
+
+            .stats {
+                width: 100%;
+            }
+
+            .stat {
+                flex: 1;
+            }
+
+            .word-card {
+                padding: 15px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page-shell">
+        <header class="hero">
+            <h1>📔 Big Muzzy 生词复习</h1>
+            <p>收藏的单词会自动显示中文释义，并可一键导出 Word</p>
+        </header>
+
+        <section class="review-panel">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button class="action-button back-button" type="button" id="backButton">← 返回练习</button>
+                    <button class="action-button export-button" type="button" id="exportButton">📄 一键导出 Word</button>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <strong id="wordCount">0</strong>
+                        <span>收藏单词</span>
+                    </div>
+                    <div class="stat">
+                        <strong id="meaningCount">0</strong>
+                        <span>已有释义</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-row">
+                <input class="search-input" id="searchInput" type="search"
+                    placeholder="搜索英文或中文释义……" aria-label="搜索生词">
+            </div>
+
+            <div class="word-list" id="wordList"></div>
+            <div class="empty-state hidden" id="emptyState">
+                <span class="emoji">📭</span>
+                <strong>生词本还是空的</strong>
+                <p>返回拖拽练习，点击“📌 收藏生词”添加需要复习的单词。</p>
+            </div>
+        </section>
+    </main>
+
+    <div class="status-message" id="statusMessage" role="status" aria-live="polite"></div>
+
+    <script src="big_muzzy_vocab_dictionary.js"></script>
+    <script>
+        (() => {
+            'use strict';
+
+            const MAIN_WORDS_KEY = 'big_muzzy_vocab';
+            const REVIEW_WORDS_KEY = 'big_muzzy_vocab_review_words_v1';
+            const state = {
+                words: [],
+                query: ''
+            };
+
+            const elements = {
+                backButton: document.getElementById('backButton'),
+                exportButton: document.getElementById('exportButton'),
+                searchInput: document.getElementById('searchInput'),
+                wordList: document.getElementById('wordList'),
+                emptyState: document.getElementById('emptyState'),
+                wordCount: document.getElementById('wordCount'),
+                meaningCount: document.getElementById('meaningCount'),
+                statusMessage: document.getElementById('statusMessage')
+            };
+
+            let statusTimer = null;
+            let currentAudio = null;
+
+            function normalizeWord(value) {
+                const raw = typeof value === 'string' ? value : value?.word;
+                return String(raw || '').replace(/’/g, "'").trim();
+            }
+
+            function wordKey(word) {
+                return normalizeWord(word).toLowerCase();
+            }
+
+            function readStorage(key, fallback) {
+                try {
+                    const value = localStorage.getItem(key);
+                    return value === null ? fallback : JSON.parse(value);
+                } catch {
+                    return fallback;
+                }
+            }
+
+            function writeStorage(key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+
+            function readTransferredWords() {
+                if (!location.hash.startsWith('#words=')) return [];
+                try {
+                    const payload = decodeURIComponent(location.hash.slice('#words='.length));
+                    const words = JSON.parse(payload);
+                    try {
+                        history.replaceState(null, '', location.pathname + location.search);
+                    } catch {
+                        // file:// 页面可能不允许清理地址栏，保留参数不影响使用。
+                    }
+                    return Array.isArray(words) ? words : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            function mergeWords(...collections) {
+                const result = [];
+                const seen = new Set();
+                collections.flat().forEach(item => {
+                    const word = normalizeWord(item);
+                    const key = wordKey(word);
+                    if (!key || seen.has(key)) return;
+                    seen.add(key);
+                    result.push(word);
+                });
+                return result;
+            }
+
+            function getChineseMeaning(word) {
+                return String(bigMuzzyVocabDictionary[wordKey(word)] || '暂无释义').trim();
+            }
+
+            function createWordCard(word, originalIndex) {
+                const card = document.createElement('article');
+                card.className = 'word-card';
+
+                const header = document.createElement('div');
+                header.className = 'word-card-header';
+
+                const number = document.createElement('span');
+                number.className = 'word-number';
+                number.textContent = String(originalIndex + 1);
+
+                const english = document.createElement('span');
+                english.className = 'english-word';
+                english.textContent = word;
+
+                const speak = document.createElement('button');
+                speak.type = 'button';
+                speak.className = 'speak-button';
+                speak.textContent = '🔊';
+                speak.title = `播放 ${word}`;
+                speak.setAttribute('aria-label', `播放单词 ${word}`);
+                speak.addEventListener('click', () => playWord(word));
+
+                header.append(number, english, speak);
+
+                const meaning = document.createElement('div');
+                meaning.className = 'chinese-meaning';
+
+                const meaningPrefix = document.createElement('span');
+                meaningPrefix.className = 'meaning-prefix';
+                meaningPrefix.textContent = '中文';
+
+                const meaningText = document.createElement('span');
+                meaningText.textContent = getChineseMeaning(word);
+
+                meaning.append(meaningPrefix, meaningText);
+                card.append(header, meaning);
+                return card;
+            }
+
+            function filteredWords() {
+                const query = state.query.toLowerCase();
+                if (!query) return state.words;
+                return state.words.filter(word => {
+                    const searchable = [
+                        word,
+                        getChineseMeaning(word)
+                    ].join(' ').toLowerCase();
+                    return searchable.includes(query);
+                });
+            }
+
+            function renderWords() {
+                const words = filteredWords();
+                elements.wordList.innerHTML = '';
+                elements.emptyState.classList.toggle('hidden', state.words.length > 0);
+
+                if (state.words.length === 0) {
+                    elements.exportButton.disabled = true;
+                    updateStats();
+                    return;
+                }
+
+                elements.exportButton.disabled = false;
+                words.forEach(word => {
+                    const originalIndex = state.words.indexOf(word);
+                    elements.wordList.appendChild(createWordCard(word, originalIndex));
+                });
+
+                if (words.length === 0) {
+                    const noResult = document.createElement('div');
+                    noResult.className = 'empty-state';
+                    noResult.innerHTML = '<span class="emoji">🔍</span><strong>没有找到匹配的生词</strong>';
+                    elements.wordList.appendChild(noResult);
+                }
+                updateStats();
+            }
+
+            function updateStats() {
+                elements.wordCount.textContent = String(state.words.length);
+                const completed = state.words.filter(word => getChineseMeaning(word) !== '暂无释义').length;
+                elements.meaningCount.textContent = String(completed);
+            }
+
+            function showStatus(message) {
+                clearTimeout(statusTimer);
+                elements.statusMessage.textContent = message;
+                elements.statusMessage.classList.add('show');
+                statusTimer = setTimeout(() => {
+                    elements.statusMessage.classList.remove('show');
+                }, 2400);
+            }
+
+            function playWord(word) {
+                if (currentAudio) currentAudio.pause();
+                const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`;
+                currentAudio = new Audio(url);
+                currentAudio.play().catch(() => {
+                    showStatus('单词音频暂时无法加载，请检查网络。');
+                });
+            }
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function exportWord() {
+                if (state.words.length === 0) {
+                    showStatus('生词本为空，暂时没有内容可以导出。');
+                    return;
+                }
+
+                const rows = state.words.map((word, index) => {
+                    const meaning = getChineseMeaning(word);
+                    return `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td class="word">${escapeHtml(word)}</td>
+                            <td>${escapeHtml(meaning)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const documentHtml = `
+                    <!DOCTYPE html>
+                    <html lang="zh-CN">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Big Muzzy 生词本</title>
+                        <style>
+                            body { font-family: "Microsoft YaHei", Arial, sans-serif; color: #1f2937; }
+                            h1 { color: #5b21b6; text-align: center; }
+                            p { color: #6b7280; text-align: center; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th { color: white; background: #667eea; }
+                            th, td { padding: 9px; border: 1px solid #d1d5db; vertical-align: top; }
+                            tr:nth-child(even) { background: #f8fafc; }
+                            .word { color: #5b21b6; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Big Muzzy 生词本</h1>
+                        <p>导出日期：${new Date().toLocaleDateString('zh-CN')}　共 ${state.words.length} 个单词</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>英文</th>
+                                    <th>中文释义</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </body>
+                    </html>
+                `;
+
+                const blob = new Blob(['\ufeff', documentHtml], {
+                    type: 'application/msword;charset=utf-8'
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Big_Muzzy_生词本_${new Date().toISOString().slice(0, 10)}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showStatus('Word 生词本已经导出。');
+            }
+
+            function goBackToPractice() {
+                if (history.length > 1) {
+                    history.back();
+                } else {
+                    window.location.href = 'big_muzzy_drag_practice.html';
+                }
+            }
+
+            function initialize() {
+                const transferred = readTransferredWords();
+                const mainWords = readStorage(MAIN_WORDS_KEY, []);
+                const reviewWords = readStorage(REVIEW_WORDS_KEY, []);
+                state.words = mergeWords(transferred, mainWords, reviewWords);
+
+                writeStorage(REVIEW_WORDS_KEY, state.words);
+                writeStorage(MAIN_WORDS_KEY, state.words);
+
+                elements.backButton.addEventListener('click', goBackToPractice);
+                elements.exportButton.addEventListener('click', exportWord);
+                elements.searchInput.addEventListener('input', event => {
+                    state.query = event.target.value.trim();
+                    renderWords();
+                });
+
+                renderWords();
+            }
+
+            initialize();
+        })();
+    </script>
+</body>
+
+</html>
