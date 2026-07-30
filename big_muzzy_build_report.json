@@ -1,0 +1,122 @@
+[
+  {
+    "lesson": 1,
+    "title": "Muzzy in Gondoland 01",
+    "sourceCues": 176,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 176,
+    "audioDuration": 815.647347,
+    "audio": "Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.mp3",
+    "subtitle": "Muzzy in Gondoland - 012 - Muzzy in Gondoland 01.srt"
+  },
+  {
+    "lesson": 2,
+    "title": "Muzzy in Gondoland 02",
+    "sourceCues": 201,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 201,
+    "audioDuration": 872.256,
+    "audio": "Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.mp3",
+    "subtitle": "Muzzy in Gondoland - 011 - Muzzy in Gondoland 02.srt"
+  },
+  {
+    "lesson": 3,
+    "title": "Muzzy in Gondoland 03",
+    "sourceCues": 197,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 197,
+    "audioDuration": 764.448,
+    "audio": "Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.mp3",
+    "subtitle": "Muzzy in Gondoland - 010 - Muzzy in Gondoland 03.srt"
+  },
+  {
+    "lesson": 4,
+    "title": "Muzzy in Gondoland 04",
+    "sourceCues": 125,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 125,
+    "audioDuration": 517.992,
+    "audio": "Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.mp3",
+    "subtitle": "Muzzy in Gondoland - 009 - Muzzy in Gondoland 04.srt"
+  },
+  {
+    "lesson": 5,
+    "title": "Muzzy in Gondoland 05",
+    "sourceCues": 161,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 161,
+    "audioDuration": 667.728,
+    "audio": "Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.mp3",
+    "subtitle": "Muzzy in Gondoland - 008 - Muzzy in Gondoland 05.srt"
+  },
+  {
+    "lesson": 6,
+    "title": "Muzzy in Gondoland 06",
+    "sourceCues": 169,
+    "omittedCuesBeyondAudio": 42,
+    "exercises": 169,
+    "audioDuration": 684.432,
+    "audio": "Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.mp3",
+    "subtitle": "Muzzy in Gondoland - 007 - Muzzy in Gondoland 06.srt"
+  },
+  {
+    "lesson": 7,
+    "title": "Muzzy Comes Back 01",
+    "sourceCues": 233,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 233,
+    "audioDuration": 847.128,
+    "audio": "Muzzy in Gondoland - 006 - Muzzy Comes Back 01.mp3",
+    "subtitle": "Muzzy in Gondoland - 006 - Muzzy Comes Back 01.srt"
+  },
+  {
+    "lesson": 8,
+    "title": "Muzzy Comes Back 02",
+    "sourceCues": 218,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 219,
+    "audioDuration": 798.648,
+    "audio": "Muzzy in Gondoland - 005 - Muzzy Comes Back 02.mp3",
+    "subtitle": "Muzzy in Gondoland - 005 - Muzzy Comes Back 02.srt"
+  },
+  {
+    "lesson": 9,
+    "title": "Muzzy Comes Back 03",
+    "sourceCues": 196,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 197,
+    "audioDuration": 701.04,
+    "audio": "Muzzy in Gondoland - 004 - Muzzy Comes Back 03.mp3",
+    "subtitle": "Muzzy in Gondoland - 004 - Muzzy Comes Back 03.srt"
+  },
+  {
+    "lesson": 10,
+    "title": "Muzzy Comes Back 04",
+    "sourceCues": 198,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 198,
+    "audioDuration": 773.472,
+    "audio": "Muzzy in Gondoland - 003 - Muzzy Comes Back 04.mp3",
+    "subtitle": "Muzzy in Gondoland - 003 - Muzzy Comes Back 04.srt"
+  },
+  {
+    "lesson": 11,
+    "title": "Muzzy Comes Back 05",
+    "sourceCues": 219,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 219,
+    "audioDuration": 900.72,
+    "audio": "Muzzy in Gondoland - 002 - Muzzy Comes Back 05.mp3",
+    "subtitle": "Muzzy in Gondoland - 002 - Muzzy Comes Back 05.srt"
+  },
+  {
+    "lesson": 12,
+    "title": "Muzzy Comes Back 06",
+    "sourceCues": 168,
+    "omittedCuesBeyondAudio": 0,
+    "exercises": 171,
+    "audioDuration": 676.872,
+    "audio": "Muzzy in Gondoland - 001 - Muzzy Comes Back 06.mp3",
+    "subtitle": "Muzzy in Gondoland - 001 - Muzzy Comes Back 06.srt"
+  }
+]
