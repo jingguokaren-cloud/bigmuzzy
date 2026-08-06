@@ -1248,7 +1248,8 @@
     <!-- Toast 提示容器 -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- 引入课程数据 -->
+    <!-- 引入课程数据与 CloudBase -->
+    <script src="https://static.cloudbase.net/cloudbase-js-sdk/3.4.2/cloudbase.full.js"></script>
     <script src="big_muzzy_data.js"></script>
     <script src="big_muzzy_audio_timings.js"></script>
 
@@ -1263,10 +1264,25 @@
         let favoritesMode = false;
         let favoriteSentences = []; // 收藏夹模式下的句子列表
         let autoShowAnswer = false; // 连播阅读模式
+        let cloudSync = null;
+        let cloudApplying = false;
+        let activeProgressStorageKey = '';
+        let progressUpdatedAt = 0;
 
         const availableLessons = Object.keys(lessonsData).map(Number).sort((a, b) => a - b);
         const defaultAudioEndPadding = 0.3;
-        const audioPaddingStorageKey = 'big_muzzy_audio_end_padding_by_lesson';
+        const baseFavoritesStorageKey = 'big_muzzy_favorites';
+        const baseVocabStorageKey = 'big_muzzy_vocab';
+        const baseAudioPaddingStorageKey = 'big_muzzy_audio_end_padding_by_lesson';
+        let favoritesStorageKey = baseFavoritesStorageKey;
+        let vocabStorageKey = baseVocabStorageKey;
+        let audioPaddingStorageKey = baseAudioPaddingStorageKey;
+
+        function markProgressChanged() {
+            if (cloudApplying || !cloudSync) return;
+            progressUpdatedAt = Date.now();
+            cloudSync.queueSync();
+        }
 
         function loadAudioPaddingSettings() {
             try {
@@ -1297,6 +1313,7 @@
             localStorage.setItem(audioPaddingStorageKey, JSON.stringify(settings));
             document.getElementById('audioPaddingValue').textContent = `${value.toFixed(2)}秒`;
             BigMuzzyAudio.cancel();
+            markProgressChanged();
         }
 
         function confirmAudioPadding() {
@@ -1360,6 +1377,7 @@
         // 加载练习题
         function loadExercise(index) {
             const sentence = sentences[index];
+            markProgressChanged();
             const badge = document.getElementById('speakerBadge');
             badge.textContent = sentence.speaker;
             badge.className = 'speaker-badge ' + sentence.speakerClass;
@@ -1937,6 +1955,7 @@
                     updateFavoriteButton();
                 }
             }
+            markProgressChanged();
         }
 
         // 重置当前练习
@@ -2190,14 +2209,15 @@
         // 获取收藏列表
         function getFavorites() {
             try {
-                return JSON.parse(localStorage.getItem('big_muzzy_favorites') || '[]');
+                return JSON.parse(localStorage.getItem(favoritesStorageKey) || '[]');
             } catch { return []; }
         }
 
         // 保存收藏列表
         function saveFavorites(favs) {
-            localStorage.setItem('big_muzzy_favorites', JSON.stringify(favs));
+            localStorage.setItem(favoritesStorageKey, JSON.stringify(favs));
             updateFavoritesBadge();
+            markProgressChanged();
         }
 
         // 检查是否已收藏
@@ -2418,12 +2438,13 @@
 
         function getVocabWords() {
             try {
-                return JSON.parse(localStorage.getItem('big_muzzy_vocab') || '[]');
+                return JSON.parse(localStorage.getItem(vocabStorageKey) || '[]');
             } catch { return []; }
         }
 
         function saveVocabWords(words) {
-            localStorage.setItem('big_muzzy_vocab', JSON.stringify(words));
+            localStorage.setItem(vocabStorageKey, JSON.stringify(words));
+            markProgressChanged();
         }
 
         function openVocabReviewPage() {
@@ -2434,8 +2455,128 @@
             window.location.href = `big_muzzy_vocab_review.html#words=${transferredWords}`;
         }
 
+        function readStoredJson(key, fallback) {
+            try {
+                const value = localStorage.getItem(key);
+                return value === null ? fallback : JSON.parse(value);
+            } catch {
+                return fallback;
+            }
+        }
+
+        function migrateStorageValue(sourceKey, targetKey) {
+            if (localStorage.getItem(targetKey) !== null) return false;
+            const sourceValue = localStorage.getItem(sourceKey);
+            if (sourceValue === null) return false;
+            localStorage.setItem(targetKey, sourceValue);
+            return true;
+        }
+
+        function studentStorageId(identity) {
+            return String(identity.userId || identity.username || 'student')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9_.:-]/g, '-');
+        }
+
+        function getCloudState() {
+            const state = {
+                lesson: currentLesson,
+                index: currentIndex,
+                score,
+                favorites: getFavorites(),
+                vocab: getVocabWords(),
+                audioPadding: loadAudioPaddingSettings(),
+                updatedAt: progressUpdatedAt
+            };
+            if (activeProgressStorageKey) {
+                localStorage.setItem(activeProgressStorageKey, JSON.stringify(state));
+            }
+            return state;
+        }
+
+        function applyCloudState(next = {}) {
+            cloudApplying = true;
+            try {
+                if (Array.isArray(next.favorites)) {
+                    localStorage.setItem(favoritesStorageKey, JSON.stringify(next.favorites));
+                }
+                if (Array.isArray(next.vocab)) {
+                    localStorage.setItem(vocabStorageKey, JSON.stringify(next.vocab));
+                }
+                if (next.audioPadding && typeof next.audioPadding === 'object') {
+                    localStorage.setItem(audioPaddingStorageKey, JSON.stringify(next.audioPadding));
+                }
+
+                const restoredLesson = Number(next.lesson);
+                if (availableLessons.includes(restoredLesson)) currentLesson = restoredLesson;
+                favoritesMode = false;
+                favoriteSentences = [];
+                document.getElementById('btnFavoritesMode')?.classList.remove('active');
+                document.getElementById('lessonSelect').disabled = false;
+                document.getElementById('lessonSelect').value = currentLesson;
+                loadLesson(currentLesson);
+
+                currentIndex = Math.max(0, Math.min(Number(next.index) || 0, sentences.length - 1));
+                score = Math.max(0, Number(next.score) || 0);
+                document.getElementById('score').textContent = score;
+                loadExercise(currentIndex);
+                updateNavButtons();
+                updateFavoritesBadge();
+                progressUpdatedAt = Number(next.updatedAt) || progressUpdatedAt;
+            } finally {
+                cloudApplying = false;
+            }
+        }
+
+        function activateStudentStorage(identity) {
+            const identityKey = studentStorageId(identity);
+            activeProgressStorageKey = `big-muzzy-v1:${identityKey}`;
+            favoritesStorageKey = `${activeProgressStorageKey}:favorites`;
+            vocabStorageKey = `${activeProgressStorageKey}:vocab`;
+            audioPaddingStorageKey = `${activeProgressStorageKey}:audio-padding`;
+
+            migrateStorageValue(baseFavoritesStorageKey, favoritesStorageKey);
+            migrateStorageValue(baseVocabStorageKey, vocabStorageKey);
+            migrateStorageValue(baseAudioPaddingStorageKey, audioPaddingStorageKey);
+            const saved = readStoredJson(activeProgressStorageKey, {});
+            applyCloudState(saved);
+        }
+
+        function deactivateStudentStorage() {
+            activeProgressStorageKey = '';
+            favoritesStorageKey = baseFavoritesStorageKey;
+            vocabStorageKey = baseVocabStorageKey;
+            audioPaddingStorageKey = baseAudioPaddingStorageKey;
+        }
+
+        async function initializeCloudSync() {
+            try {
+                const { createCloudSync } = await import('./cloud-sync.js?v=20260806-cloudbase');
+                cloudSync = await createCloudSync({
+                    appId: 'big-muzzy',
+                    appLabel: 'Big Muzzy 学习记录',
+                    storageKey: 'big-muzzy-v1',
+                    getState: getCloudState,
+                    applyState: applyCloudState,
+                    getSummary: () => ({
+                        lesson: currentLesson,
+                        sentence: currentIndex + 1,
+                        favorites: getFavorites().length,
+                        vocab: getVocabWords().length,
+                        score
+                    }),
+                    onAuthenticated: activateStudentStorage,
+                    onSignedOut: deactivateStudentStorage
+                });
+            } catch (error) {
+                console.error('CloudBase 初始化失败', error);
+            }
+        }
+
         // 启动
         init();
+        initializeCloudSync();
     </script>
 </body>
 

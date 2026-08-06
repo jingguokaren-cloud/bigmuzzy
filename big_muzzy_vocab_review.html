@@ -359,13 +359,20 @@
 
     <div class="status-message" id="statusMessage" role="status" aria-live="polite"></div>
 
+    <script src="https://static.cloudbase.net/cloudbase-js-sdk/3.4.2/cloudbase.full.js"></script>
     <script src="big_muzzy_vocab_dictionary.js"></script>
     <script>
         (() => {
             'use strict';
 
-            const MAIN_WORDS_KEY = 'big_muzzy_vocab';
-            const REVIEW_WORDS_KEY = 'big_muzzy_vocab_review_words_v1';
+            const BASE_MAIN_WORDS_KEY = 'big_muzzy_vocab';
+            const BASE_REVIEW_WORDS_KEY = 'big_muzzy_vocab_review_words_v1';
+            let mainWordsKey = BASE_MAIN_WORDS_KEY;
+            let reviewWordsKey = BASE_REVIEW_WORDS_KEY;
+            let activeProgressStorageKey = '';
+            let cloudSync = null;
+            let cloudApplying = false;
+            let progressUpdatedAt = 0;
             const state = {
                 words: [],
                 query: ''
@@ -406,6 +413,10 @@
             function writeStorage(key, value) {
                 try {
                     localStorage.setItem(key, JSON.stringify(value));
+                    if (!cloudApplying && cloudSync && (key === mainWordsKey || key === reviewWordsKey)) {
+                        progressUpdatedAt = Date.now();
+                        cloudSync.queueSync();
+                    }
                     return true;
                 } catch {
                     return false;
@@ -621,7 +632,8 @@
                 showStatus('Word 生词本已经导出。');
             }
 
-            function goBackToPractice() {
+            async function goBackToPractice() {
+                if (cloudSync) await cloudSync.syncNow();
                 if (history.length > 1) {
                     history.back();
                 } else {
@@ -631,12 +643,12 @@
 
             function initialize() {
                 const transferred = readTransferredWords();
-                const mainWords = readStorage(MAIN_WORDS_KEY, []);
-                const reviewWords = readStorage(REVIEW_WORDS_KEY, []);
+                const mainWords = readStorage(mainWordsKey, []);
+                const reviewWords = readStorage(reviewWordsKey, []);
                 state.words = mergeWords(transferred, mainWords, reviewWords);
 
-                writeStorage(REVIEW_WORDS_KEY, state.words);
-                writeStorage(MAIN_WORDS_KEY, state.words);
+                writeStorage(reviewWordsKey, state.words);
+                writeStorage(mainWordsKey, state.words);
 
                 elements.backButton.addEventListener('click', goBackToPractice);
                 elements.exportButton.addEventListener('click', exportWord);
@@ -648,7 +660,82 @@
                 renderWords();
             }
 
+            function studentStorageId(identity) {
+                return String(identity.userId || identity.username || 'student')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_.:-]/g, '-');
+            }
+
+            function migrateStorageValue(sourceKey, targetKey) {
+                if (localStorage.getItem(targetKey) !== null) return;
+                const sourceValue = localStorage.getItem(sourceKey);
+                if (sourceValue !== null) localStorage.setItem(targetKey, sourceValue);
+            }
+
+            function getCloudState() {
+                const snapshot = {
+                    vocab: state.words,
+                    updatedAt: progressUpdatedAt
+                };
+                if (activeProgressStorageKey) {
+                    localStorage.setItem(activeProgressStorageKey, JSON.stringify(snapshot));
+                }
+                return snapshot;
+            }
+
+            function applyCloudState(next = {}) {
+                cloudApplying = true;
+                try {
+                    state.words = Array.isArray(next.vocab)
+                        ? mergeWords(next.vocab)
+                        : mergeWords(readStorage(mainWordsKey, []));
+                    writeStorage(mainWordsKey, state.words);
+                    writeStorage(reviewWordsKey, state.words);
+                    progressUpdatedAt = Number(next.updatedAt) || progressUpdatedAt;
+                    renderWords();
+                } finally {
+                    cloudApplying = false;
+                }
+            }
+
+            function activateStudentStorage(identity) {
+                const identityKey = studentStorageId(identity);
+                activeProgressStorageKey = `big-muzzy-v1:${identityKey}:vocab-review`;
+                mainWordsKey = `big-muzzy-v1:${identityKey}:vocab`;
+                reviewWordsKey = `big-muzzy-v1:${identityKey}:review-words`;
+                migrateStorageValue(BASE_MAIN_WORDS_KEY, mainWordsKey);
+                migrateStorageValue(BASE_REVIEW_WORDS_KEY, reviewWordsKey);
+                const saved = readStorage(activeProgressStorageKey, {});
+                applyCloudState(saved);
+            }
+
+            function deactivateStudentStorage() {
+                activeProgressStorageKey = '';
+                mainWordsKey = BASE_MAIN_WORDS_KEY;
+                reviewWordsKey = BASE_REVIEW_WORDS_KEY;
+            }
+
+            async function initializeCloudSync() {
+                try {
+                    const { createCloudSync } = await import('./cloud-sync.js?v=20260806-cloudbase');
+                    cloudSync = await createCloudSync({
+                        appId: 'big-muzzy',
+                        appLabel: 'Big Muzzy 生词复习',
+                        storageKey: 'big-muzzy-v1',
+                        getState: getCloudState,
+                        applyState: applyCloudState,
+                        getSummary: () => ({ vocab: state.words.length, page: 'vocab-review' }),
+                        onAuthenticated: activateStudentStorage,
+                        onSignedOut: deactivateStudentStorage
+                    });
+                } catch (error) {
+                    console.error('CloudBase 初始化失败', error);
+                }
+            }
+
             initialize();
+            initializeCloudSync();
         })();
     </script>
 </body>
