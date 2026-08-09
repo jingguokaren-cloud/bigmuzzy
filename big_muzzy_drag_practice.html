@@ -1158,9 +1158,6 @@
                         onclick="showVocabPicker()">
                         📌 收藏生词
                     </button>
-                    <button class="btn-speak-sentence" onclick="speakCurrentSentence()">
-                        🔊 听句子
-                    </button>
                 </div>
                 <div class="speaker-badge" id="speakerBadge">SAM</div>
                 <div class="nav-buttons" aria-label="句子切换">
@@ -1178,6 +1175,9 @@
                 <div class="word-pool" id="wordPool"></div>
 
                 <div class="buttons">
+                    <button class="btn-speak-sentence" onclick="speakCurrentSentence()">
+                        🔊 听句子
+                    </button>
                     <button class="btn btn-check" onclick="checkAnswer()">✓ 检查答案</button>
                     <button class="btn btn-favorite" id="btnFavorite" onclick="toggleFavorite()">☆ 收藏</button>
                     <button class="btn btn-reset" onclick="resetCurrentExercise()">🔄 重置</button>
