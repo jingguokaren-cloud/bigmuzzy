@@ -1175,7 +1175,8 @@
                 <div class="word-pool" id="wordPool"></div>
 
                 <div class="buttons">
-                    <button class="btn-speak-sentence" onclick="speakCurrentSentence()">
+                    <button type="button" class="btn btn-speak-sentence" id="btnSpeakSentence"
+                        onclick="speakCurrentSentence()">
                         🔊 听句子
                     </button>
                     <button class="btn btn-check" onclick="checkAnswer()">✓ 检查答案</button>
@@ -1591,39 +1592,38 @@
                 const actualEnd = Math.max(actualStart, segment.end + getLessonAudioPadding(lessonNum));
 
                 try {
-                    // 必须在按钮点击产生的用户手势仍然有效时立即请求播放。
-                    // 先静音启动，完成元数据加载和定位后再恢复音量。
-                    audio.volume = 0;
-                    const gesturePlayPromise = audio.play()
-                        .then(() => {
-                            if (this.playId !== currentPlayId) {
-                                audio.pause();
-                                audio.volume = 1;
-                                return false;
-                            }
-                            return true;
-                        })
-                        .catch(() => false);
+                    let playPromise;
 
-                    const metadataReady = await this.waitForMetadata(audio);
-                    if (this.playId !== currentPlayId) return 'cancelled';
-                    if (!metadataReady) {
-                        this.playId++;
+                    if (audio.readyState >= 1) {
+                        // 元数据已由课程预加载完成：在点击事件尚未结束时直接定位并播放，
+                        // 避免 Safari 等浏览器在异步等待后撤销播放权限。
                         audio.pause();
                         audio.volume = 1;
-                        return 'unavailable';
+                        audio.currentTime = actualStart;
+                        playPromise = audio.play();
+                    } else {
+                        // 首次加载时先在用户手势内静音启动，以取得播放权限。
+                        audio.volume = 0;
+                        playPromise = audio.play();
+
+                        const metadataReady = await this.waitForMetadata(audio);
+                        if (this.playId !== currentPlayId) return 'cancelled';
+                        if (!metadataReady) {
+                            this.playId++;
+                            audio.pause();
+                            audio.volume = 1;
+                            return 'unavailable';
+                        }
+
+                        audio.currentTime = actualStart;
                     }
 
-                    audio.currentTime = actualStart;
                     await this.waitForSeek(audio);
                     if (this.playId !== currentPlayId) return 'cancelled';
 
-                    const gesturePlaySucceeded = await gesturePlayPromise;
+                    await playPromise;
                     if (this.playId !== currentPlayId) return 'cancelled';
-
                     audio.volume = 1;
-                    if (!gesturePlaySucceeded) await audio.play();
-                    if (this.playId !== currentPlayId) return 'cancelled';
 
                     return new Promise(resolve => {
                         const playback = {
@@ -1722,10 +1722,11 @@
                 if (playbackStatus === 'unavailable') {
                     showToast('原声音频暂时无法播放，请稍后再试', 'wrong');
                 }
-                return;
+                return playbackStatus;
             }
 
             speakWithBrowserTTS(cleanText, currentRequestId);
+            return 'completed';
         }
 
         // 使用浏览器内置 Web Speech API 作为发音引擎
@@ -2012,11 +2013,24 @@
         }
 
         // 播放当前句子
-        function speakCurrentSentence() {
+        let speakButtonRequestId = 0;
+
+        async function speakCurrentSentence() {
             const sentence = sentences[currentIndex].english;
             const lessonNum = favoritesMode ? favoriteSentences[currentIndex].lesson : currentLesson;
             const sentenceIndex = favoritesMode ? favoriteSentences[currentIndex].index : currentIndex;
-            return speakPhrase(sentence, lessonNum, sentenceIndex);
+            const requestId = ++speakButtonRequestId;
+            const button = document.getElementById('btnSpeakSentence');
+
+            if (button) button.textContent = '🔊 播放中…';
+
+            try {
+                return await speakPhrase(sentence, lessonNum, sentenceIndex);
+            } finally {
+                if (button && requestId === speakButtonRequestId) {
+                    button.textContent = '🔊 听句子';
+                }
+            }
         }
 
         // 一键复制句子进行AI讲解
