@@ -359,7 +359,6 @@
 
     <div class="status-message" id="statusMessage" role="status" aria-live="polite"></div>
 
-    <script src="https://static.cloudbase.net/cloudbase-js-sdk/3.4.2/cloudbase.full.js"></script>
     <script src="big_muzzy_vocab_dictionary.js"></script>
     <script>
         (() => {
@@ -369,9 +368,7 @@
             const BASE_REVIEW_WORDS_KEY = 'big_muzzy_vocab_review_words_v1';
             let mainWordsKey = BASE_MAIN_WORDS_KEY;
             let reviewWordsKey = BASE_REVIEW_WORDS_KEY;
-            let activeProgressStorageKey = '';
-            let cloudSync = null;
-            let cloudApplying = false;
+            let applyingState = false;
             let progressUpdatedAt = 0;
             const state = {
                 words: [],
@@ -413,10 +410,10 @@
             function writeStorage(key, value) {
                 try {
                     localStorage.setItem(key, JSON.stringify(value));
-                    if (!cloudApplying && cloudSync && (key === mainWordsKey || key === reviewWordsKey)) {
-                        progressUpdatedAt = Date.now();
-                        cloudSync.queueSync();
-                    }
+                    if (!applyingState) {
+    progressUpdatedAt = Date.now();
+    saveProgress();
+}
                     return true;
                 } catch {
                     return false;
@@ -633,7 +630,7 @@
             }
 
             async function goBackToPractice() {
-                if (cloudSync) await cloudSync.syncNow();
+                saveProgress();
                 if (history.length > 1) {
                     history.back();
                 } else {
@@ -660,32 +657,23 @@
                 renderWords();
             }
 
-            function studentStorageId(identity) {
-                return String(identity.userId || identity.username || 'student')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/[^a-z0-9_.:-]/g, '-');
-            }
+            const progressStorageKey = "big-muzzy-v1:vocab-review";
 
-            function migrateStorageValue(sourceKey, targetKey) {
-                if (localStorage.getItem(targetKey) !== null) return;
-                const sourceValue = localStorage.getItem(sourceKey);
-                if (sourceValue !== null) localStorage.setItem(targetKey, sourceValue);
-            }
-
-            function getCloudState() {
+            function saveProgress() {
                 const snapshot = {
                     vocab: state.words,
                     updatedAt: progressUpdatedAt
                 };
-                if (activeProgressStorageKey) {
-                    localStorage.setItem(activeProgressStorageKey, JSON.stringify(snapshot));
+                try {
+                    localStorage.setItem(progressStorageKey, JSON.stringify(snapshot));
+                } catch (error) {
+                    console.warn("本机进度保存失败", error);
                 }
                 return snapshot;
             }
 
-            function applyCloudState(next = {}) {
-                cloudApplying = true;
+            function applySavedProgress(next = {}) {
+                applyingState = true;
                 try {
                     state.words = Array.isArray(next.vocab)
                         ? mergeWords(next.vocab)
@@ -695,47 +683,21 @@
                     progressUpdatedAt = Number(next.updatedAt) || progressUpdatedAt;
                     renderWords();
                 } finally {
-                    cloudApplying = false;
+                    applyingState = false;
                 }
             }
 
-            function activateStudentStorage(identity) {
-                const identityKey = studentStorageId(identity);
-                activeProgressStorageKey = `big-muzzy-v1:${identityKey}:vocab-review`;
-                mainWordsKey = `big-muzzy-v1:${identityKey}:vocab`;
-                reviewWordsKey = `big-muzzy-v1:${identityKey}:review-words`;
-                migrateStorageValue(BASE_MAIN_WORDS_KEY, mainWordsKey);
-                migrateStorageValue(BASE_REVIEW_WORDS_KEY, reviewWordsKey);
-                const saved = readStorage(activeProgressStorageKey, {});
-                applyCloudState(saved);
-            }
-
-            function deactivateStudentStorage() {
-                activeProgressStorageKey = '';
-                mainWordsKey = BASE_MAIN_WORDS_KEY;
-                reviewWordsKey = BASE_REVIEW_WORDS_KEY;
-            }
-
-            async function initializeCloudSync() {
+            function loadSavedProgress() {
                 try {
-                    const { createCloudSync } = await import('./cloud-sync.js?v=20260806-cloudbase');
-                    cloudSync = await createCloudSync({
-                        appId: 'big-muzzy',
-                        appLabel: 'Big Muzzy 生词复习',
-                        storageKey: 'big-muzzy-v1',
-                        getState: getCloudState,
-                        applyState: applyCloudState,
-                        getSummary: () => ({ vocab: state.words.length, page: 'vocab-review' }),
-                        onAuthenticated: activateStudentStorage,
-                        onSignedOut: deactivateStudentStorage
-                    });
+                    return JSON.parse(localStorage.getItem(progressStorageKey) || "{}") || {};
                 } catch (error) {
-                    console.error('CloudBase 初始化失败', error);
+                    return {};
                 }
             }
 
+            const initialSavedProgress = loadSavedProgress();
             initialize();
-            initializeCloudSync();
+            applySavedProgress(initialSavedProgress);
         })();
     </script>
 </body>

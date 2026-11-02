@@ -1249,8 +1249,7 @@
     <!-- Toast 提示容器 -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- 引入课程数据与 CloudBase -->
-    <script src="https://static.cloudbase.net/cloudbase-js-sdk/3.4.2/cloudbase.full.js"></script>
+    <!-- 引入课程数据 -->
     <script src="big_muzzy_data.js"></script>
     <script src="big_muzzy_audio_timings.js"></script>
 
@@ -1265,9 +1264,7 @@
         let favoritesMode = false;
         let favoriteSentences = []; // 收藏夹模式下的句子列表
         let autoShowAnswer = false; // 连播阅读模式
-        let cloudSync = null;
-        let cloudApplying = false;
-        let activeProgressStorageKey = '';
+        let applyingState = false;
         let progressUpdatedAt = 0;
 
         const availableLessons = Object.keys(lessonsData).map(Number).sort((a, b) => a - b);
@@ -1280,9 +1277,8 @@
         let audioPaddingStorageKey = baseAudioPaddingStorageKey;
 
         function markProgressChanged() {
-            if (cloudApplying || !cloudSync) return;
             progressUpdatedAt = Date.now();
-            cloudSync.queueSync();
+            saveProgress();
         }
 
         function loadAudioPaddingSettings() {
@@ -2478,22 +2474,9 @@
             }
         }
 
-        function migrateStorageValue(sourceKey, targetKey) {
-            if (localStorage.getItem(targetKey) !== null) return false;
-            const sourceValue = localStorage.getItem(sourceKey);
-            if (sourceValue === null) return false;
-            localStorage.setItem(targetKey, sourceValue);
-            return true;
-        }
+        const progressStorageKey = "big-muzzy-v1";
 
-        function studentStorageId(identity) {
-            return String(identity.userId || identity.username || 'student')
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-z0-9_.:-]/g, '-');
-        }
-
-        function getCloudState() {
+        function saveProgress() {
             const state = {
                 lesson: currentLesson,
                 index: currentIndex,
@@ -2503,14 +2486,16 @@
                 audioPadding: loadAudioPaddingSettings(),
                 updatedAt: progressUpdatedAt
             };
-            if (activeProgressStorageKey) {
-                localStorage.setItem(activeProgressStorageKey, JSON.stringify(state));
+            try {
+                localStorage.setItem(progressStorageKey, JSON.stringify(state));
+            } catch (error) {
+                console.warn("本机进度保存失败", error);
             }
             return state;
         }
 
-        function applyCloudState(next = {}) {
-            cloudApplying = true;
+        function applySavedProgress(next = {}) {
+            applyingState = true;
             try {
                 if (Array.isArray(next.favorites)) {
                     localStorage.setItem(favoritesStorageKey, JSON.stringify(next.favorites));
@@ -2539,58 +2524,52 @@
                 updateFavoritesBadge();
                 progressUpdatedAt = Number(next.updatedAt) || progressUpdatedAt;
             } finally {
-                cloudApplying = false;
+                applyingState = false;
             }
         }
 
-        function activateStudentStorage(identity) {
-            const identityKey = studentStorageId(identity);
-            activeProgressStorageKey = `big-muzzy-v1:${identityKey}`;
-            favoritesStorageKey = `${activeProgressStorageKey}:favorites`;
-            vocabStorageKey = `${activeProgressStorageKey}:vocab`;
-            audioPaddingStorageKey = `${activeProgressStorageKey}:audio-padding`;
-
-            migrateStorageValue(baseFavoritesStorageKey, favoritesStorageKey);
-            migrateStorageValue(baseVocabStorageKey, vocabStorageKey);
-            migrateStorageValue(baseAudioPaddingStorageKey, audioPaddingStorageKey);
-            const saved = readStoredJson(activeProgressStorageKey, {});
-            applyCloudState(saved);
-        }
-
-        function deactivateStudentStorage() {
-            activeProgressStorageKey = '';
-            favoritesStorageKey = baseFavoritesStorageKey;
-            vocabStorageKey = baseVocabStorageKey;
-            audioPaddingStorageKey = baseAudioPaddingStorageKey;
-        }
-
-        async function initializeCloudSync() {
+        function findLegacyProgressKey(prefix) {
+            let bestKey = "";
+            let bestAt = -1;
             try {
-                const { createCloudSync } = await import('./cloud-sync.js?v=20260806-cloudbase');
-                cloudSync = await createCloudSync({
-                    appId: 'big-muzzy',
-                    appLabel: 'Big Muzzy 学习记录',
-                    storageKey: 'big-muzzy-v1',
-                    getState: getCloudState,
-                    applyState: applyCloudState,
-                    getSummary: () => ({
-                        lesson: currentLesson,
-                        sentence: currentIndex + 1,
-                        favorites: getFavorites().length,
-                        vocab: getVocabWords().length,
-                        score
-                    }),
-                    onAuthenticated: activateStudentStorage,
-                    onSignedOut: deactivateStudentStorage
-                });
+                for (let i = 0; i < localStorage.length; i += 1) {
+                    const key = localStorage.key(i) || "";
+                    if (key.indexOf(prefix + ":") !== 0) continue;
+                    if (key.endsWith(":favorites") || key.endsWith(":vocab") || key.endsWith(":audio-padding")) continue;
+                    let at = 0;
+                    try { at = Number(JSON.parse(localStorage.getItem(key) || "{}").updatedAt) || 0; } catch (error) { at = 0; }
+                    if (at > bestAt) { bestAt = at; bestKey = key; }
+                }
+            } catch (error) { bestKey = ""; }
+            return bestKey;
+        }
+        function copyLegacyValue(sourceKey, targetKey) {
+            try {
+                if (localStorage.getItem(targetKey) !== null) return;
+                const value = localStorage.getItem(sourceKey);
+                if (value !== null) localStorage.setItem(targetKey, value);
+            } catch (error) { /* 空间不足时忽略 */ }
+        }
+
+        function loadSavedProgress() {
+            try {
+                const legacyKey = findLegacyProgressKey(progressStorageKey);
+                if (legacyKey && localStorage.getItem(progressStorageKey) === null) {
+                    localStorage.setItem(progressStorageKey, localStorage.getItem(legacyKey) || "{}");
+                    copyLegacyValue(legacyKey + ":favorites", favoritesStorageKey);
+                    copyLegacyValue(legacyKey + ":vocab", vocabStorageKey);
+                    copyLegacyValue(legacyKey + ":audio-padding", audioPaddingStorageKey);
+                }
+                return JSON.parse(localStorage.getItem(progressStorageKey) || "{}") || {};
             } catch (error) {
-                console.error('CloudBase 初始化失败', error);
+                return {};
             }
         }
 
         // 启动
+        const initialSavedProgress = loadSavedProgress();
         init();
-        initializeCloudSync();
+        applySavedProgress(initialSavedProgress);
     </script>
 </body>
 
